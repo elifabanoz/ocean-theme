@@ -1,85 +1,85 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, ThemeSetArgs } from 'claude-code'
 
-import type { OkyanusMotion, OkyanusScheme, OkyanusSettings } from '../types'
+import type { OceanMotion, OceanScheme, OceanSettings } from '../types'
 import { buildScene } from './scene'
 
-const PLUGIN = 'okyanus-tema'
-const PANE = 'okyanus-ayarlar'
+const PLUGIN = 'ocean-theme'
+const PANE = 'ocean-settings'
 const STORE_KEY = 'settings'
-const DEFAULTS: OkyanusSettings = { scheme: 'koyu', motion: 'tam', isOn: true }
+const DEFAULTS: OceanSettings = { scheme: 'dark', motion: 'full', isOn: true }
 
-const settings = atom({ plugin: 'okyanus-tema', key: 'settings' } as const, DEFAULTS, {
+const settings = atom({ plugin: 'ocean-theme', key: 'settings' } as const, DEFAULTS, {
   shape: 'settings-1',
 })
 
-const SCHEMES: OkyanusScheme[] = ['koyu', 'acik']
-const MOTIONS: OkyanusMotion[] = ['tam', 'azalt', 'durgun']
+const SCHEMES: OceanScheme[] = ['dark', 'light']
+const MOTIONS: OceanMotion[] = ['full', 'reduced', 'still']
 
-const clean = (raw: unknown): OkyanusSettings => {
-  const v = (raw ?? {}) as Partial<OkyanusSettings>
+const clean = (raw: unknown): OceanSettings => {
+  const v = (raw ?? {}) as Partial<OceanSettings>
 
   return {
-    scheme: SCHEMES.includes(v.scheme as OkyanusScheme) ? (v.scheme as OkyanusScheme) : DEFAULTS.scheme,
-    motion: MOTIONS.includes(v.motion as OkyanusMotion) ? (v.motion as OkyanusMotion) : DEFAULTS.motion,
+    scheme: SCHEMES.includes(v.scheme as OceanScheme) ? (v.scheme as OceanScheme) : DEFAULTS.scheme,
+    motion: MOTIONS.includes(v.motion as OceanMotion) ? (v.motion as OceanMotion) : DEFAULTS.motion,
     isOn: typeof v.isOn === 'boolean' ? v.isOn : DEFAULTS.isOn,
   }
 }
 
-// Panellerin buzlu camı: metin okunaklı kalsın diye sahnenin tonunda,
-// yeterince opak bir örtü.
-const GLASS: Record<OkyanusScheme, { blur: number; tint: string; opacity: number }> = {
-  koyu: { blur: 18, tint: '#05203a', opacity: 0.68 },
-  acik: { blur: 18, tint: '#f5fbfa', opacity: 0.7 },
+// The frosted glass over the scene: tinted to match it, and opaque enough
+// that the conversation stays easy to read.
+const GLASS: Record<OceanScheme, { blur: number; tint: string; opacity: number }> = {
+  dark: { blur: 18, tint: '#05203a', opacity: 0.68 },
+  light: { blur: 18, tint: '#f5fbfa', opacity: 0.7 },
 }
 
-const backdropId = (s: OkyanusSettings) => `okyanus-${s.scheme}-${s.motion}`
+const sceneId = (s: OceanSettings) => `ocean-${s.scheme}-${s.motion}`
 
-// Tanı bilgisi: son tema isteğinin sonucu ve arka planın kaç kez çizildiği.
-let lastResult = 'henüz istenmedi'
+// Diagnostics: the outcome of the last theme request and the latest draws.
+let lastResult = 'not requested yet'
 let renders: string[] = []
 
 type ThemeOutcome = Awaited<ReturnType<EngineInterface['theme']['set']>>
 
-// Claude Code 2.1.323 ve sonrası: backdrop.scene + üst düzey overrideColorScheme.
-// Daha eski sürümler: backdrop.id + backdrop.colorScheme. Önce yenisini dener,
-// reddedilirse eskisine düşer.
-const setTheme = async ($: EngineInterface, s: OkyanusSettings): Promise<ThemeOutcome> => {
-  const scheme = s.scheme === 'koyu' ? 'dark' : 'light'
+// Claude Code 2.1.323 and later: backdrop.scene plus a top-level
+// overrideColorScheme. Earlier builds: backdrop.id plus backdrop.colorScheme.
+// Try the newer shape first and fall back to the older one if it is refused.
+const setTheme = async ($: EngineInterface, s: OceanSettings): Promise<ThemeOutcome> => {
   try {
     const newer = {
-      backdrop: { scene: backdropId(s), glass: GLASS[s.scheme] },
-      overrideColorScheme: scheme,
+      backdrop: { scene: sceneId(s), glass: GLASS[s.scheme] },
+      overrideColorScheme: s.scheme,
     }
     return await $.theme.set(newer as unknown as ThemeSetArgs)
   } catch (newer) {
     try {
-      return await $.theme.set({ backdrop: { id: backdropId(s), glass: GLASS[s.scheme], colorScheme: scheme } })
+      const older = { backdrop: { id: sceneId(s), glass: GLASS[s.scheme], colorScheme: s.scheme } }
+      return await $.theme.set(older as unknown as ThemeSetArgs)
     } catch (older) {
-      throw new Error(`yeni biçim: ${String(newer)} · eski biçim: ${String(older)}`)
+      throw new Error(`newer shape: ${String(newer)} · older shape: ${String(older)}`)
     }
   }
 }
 
-const apply = async ($: EngineInterface, s: OkyanusSettings) => {
+const apply = async ($: EngineInterface, s: OceanSettings) => {
   try {
     const result = s.isOn ? await setTheme($, s) : await $.theme.clear()
     lastResult = result.isDrawn
-      ? `çiziliyor (istek ${result.requestId})`
+      ? `drawn (request ${result.requestId})`
       : /stands and draws when one attaches/.test(result.reason)
-        ? 'kaydedildi; uygulama bağlanınca çizilir'
-        : `çizilmiyor: ${result.reason}`
+        ? 'saved; it draws as soon as the app attaches'
+        : `not drawn: ${result.reason}`
   } catch (error) {
-    lastResult = `hata: ${String(error)}`
+    lastResult = `error: ${String(error)}`
   }
 }
 
 const diagnose = () =>
-  `Tanı: tema isteği ${lastResult}. Arka plan çizim çağrıları: ${
-    renders.length === 0 ? 'hiç gelmedi' : renders.slice(-4).join(', ')
+  `Status: theme request ${lastResult}. Backdrop draws: ${
+    renders.length === 0 ? 'none yet' : renders.slice(-4).join(', ')
   }.`
 
-const save = async ($: EngineInterface, change: Partial<OkyanusSettings>) => {
+const save = async ($: EngineInterface, change: Partial<OceanSettings>) => {
   let next = DEFAULTS
   await update($, settings, old => {
     next = clean({ ...clean(old), ...change })
@@ -92,43 +92,38 @@ const save = async ($: EngineInterface, change: Partial<OkyanusSettings>) => {
   return next
 }
 
-const describe = (s: OkyanusSettings) => {
-  const scheme = s.scheme === 'koyu' ? 'koyu (derin lacivert)' : 'açık (turkuaz-kum)'
-  const motion = { tam: 'tam', azalt: 'azaltılmış', durgun: 'kapalı (durgun sahne)' }[s.motion]
+const describe = (s: OceanSettings) => {
+  const scheme = s.scheme === 'dark' ? 'dark (deep ocean navy)' : 'light (turquoise and sand)'
+  const motion = { full: 'full', reduced: 'reduced', still: 'off (still scene)' }[s.motion]
 
-  return s.isOn ? `Okyanus teması açık: ${scheme}, animasyon ${motion}.` : 'Okyanus teması kapalı.'
+  return s.isOn ? `Ocean theme on: ${scheme}, motion ${motion}.` : 'Ocean theme off.'
 }
 
 const HELP = [
-  '/okyanus            ayar panelini açar',
-  '/okyanus koyu       derin lacivert sahne',
-  '/okyanus acik       açık turkuaz-kum sahne',
-  '/okyanus tam        animasyonlar tam',
-  '/okyanus azalt      daha yavaş ve daha az hareket',
-  '/okyanus durgun     animasyonları kapatır (sahne kalır)',
-  '/okyanus kapat      temayı kaldırır · /okyanus ac  geri getirir',
-  '/okyanus tani       tema durumunu gösterir',
+  '/ocean              open the settings panel',
+  '/ocean dark         deep navy scene',
+  '/ocean light        light turquoise and sand scene',
+  '/ocean full         full motion',
+  '/ocean reduced      slower, calmer motion',
+  '/ocean still        no motion (the scene stays)',
+  '/ocean off          remove the theme · /ocean on  bring it back',
+  '/ocean status       show whether the theme is drawn',
 ].join('\n')
 
-const parse = (args: string): Partial<OkyanusSettings> | 'help' | null => {
-  const words = args
-    .toLocaleLowerCase('tr')
-    .replace(/ı/g, 'i')
-    .replace(/ç/g, 'c')
-    .split(/\s+/)
-    .filter(Boolean)
+const parse = (args: string): Partial<OceanSettings> | 'help' | null => {
+  const words = args.toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) {
     return null
   }
-  const change: Partial<OkyanusSettings> = {}
+  const change: Partial<OceanSettings> = {}
   for (const w of words) {
-    if (['koyu', 'dark', 'gece'].includes(w)) change.scheme = 'koyu'
-    else if (['acik', 'light', 'gunduz'].includes(w)) change.scheme = 'acik'
-    else if (['tam', 'full'].includes(w)) change.motion = 'tam'
-    else if (['azalt', 'az', 'azaltilmis', 'reduce'].includes(w)) change.motion = 'azalt'
-    else if (['durgun', 'sabit', 'kapali', 'still', 'dur'].includes(w)) change.motion = 'durgun'
-    else if (['kapat', 'off'].includes(w)) change.isOn = false
-    else if (['ac', 'on'].includes(w)) change.isOn = true
+    if (['dark', 'night'].includes(w)) change.scheme = 'dark'
+    else if (['light', 'day'].includes(w)) change.scheme = 'light'
+    else if (['full'].includes(w)) change.motion = 'full'
+    else if (['reduced', 'reduce', 'calm'].includes(w)) change.motion = 'reduced'
+    else if (['still', 'static', 'pause'].includes(w)) change.motion = 'still'
+    else if (['off'].includes(w)) change.isOn = false
+    else if (['on'].includes(w)) change.isOn = true
     else return 'help'
   }
 
@@ -138,9 +133,9 @@ const parse = (args: string): Partial<OkyanusSettings> | 'help' | null => {
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
-      name: 'okyanus',
-      description: 'Okyanus teması: koyu/açık mod ve animasyon ayarı (tam, azalt, durgun)',
-      argumentHint: '[koyu|acik] [tam|azalt|durgun] [kapat|ac]',
+      name: 'ocean',
+      description: 'Ocean theme: dark or light scene, and motion (full, reduced, still)',
+      argumentHint: '[dark|light] [full|reduced|still] [off|on|status]',
     })
     const stored = clean(await $.store.get(STORE_KEY))
     await update($, settings, () => stored)
@@ -149,46 +144,46 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('command.run', { command: 'okyanus' }, async ($, e) => {
-    if (/^\s*tan[iı]\s*$/i.test(e.args)) {
+  on('command.run', { command: 'ocean' }, async ($, e) => {
+    if (/^\s*status\s*$/i.test(e.args)) {
       return { text: diagnose() }
     }
     const change = parse(e.args)
     if (change === 'help') {
-      return { text: `Anlayamadım. Kullanım:\n${HELP}` }
+      return { text: `Unknown option. Usage:\n${HELP}` }
     }
     if (change === null) {
-      await $.ui.open({ id: PANE, title: 'Okyanus teması' })
+      await $.ui.open({ id: PANE, title: 'Ocean theme' })
 
-      return { text: `${describe(await read($, settings))}\nAyar paneli açıldı.` }
+      return { text: `${describe(await read($, settings))}\nSettings panel opened.` }
     }
     const now = await save($, { ...change, isOn: change.isOn ?? true })
 
     return { text: describe(now) }
   })
 
-  // Sahneyi çizen kanca: yalnızca bu modun kendi arka planı.
+  // Draws this mod's own backdrop and passes every other one on.
   on('ui.render', { component: 'Backdrop' }, async ($, e, next) => {
     const props = e.props as unknown as { scene?: string; id?: string; plugin: string }
-    const sceneName = props.scene ?? props.id ?? ''
-    const match = /^okyanus-(koyu|acik)-(tam|azalt|durgun)$/.exec(sceneName)
-    if (!match || !e.props.plugin.startsWith(PLUGIN)) {
+    const name = props.scene ?? props.id ?? ''
+    const match = /^ocean-(dark|light)-(full|reduced|still)$/.exec(name)
+    if (!match || !props.plugin.startsWith(PLUGIN)) {
       return next(e)
     }
-    renders = [...renders, `${e.surface}:${sceneName}`].slice(-8)
+    renders = [...renders, `${e.surface}:${name}`].slice(-8)
     const elements = $.ui.resolve(e)
     if (!('Svg' in elements)) {
       return next(e)
     }
     const { Box, Svg } = elements
-    const scheme = match[1] as OkyanusScheme
-    const motion = match[2] as OkyanusMotion
+    const scheme = match[1] as OceanScheme
+    const motion = match[2] as OceanMotion
 
     return (
       <Box width="100%" height="100%">
         <Svg
           source={buildScene(scheme, motion)}
-          alt="Sualtı sahnesi: ışık huzmeleri, yunus, kaplumbağa, deniz atı, denizanası, deniz yıldızları, yosunlar ve kabarcıklar"
+          alt="Underwater scene: light rays, dolphins, turtles, seahorses, jellyfish, fish, starfish, seaweed and bubbles"
         />
       </Box>
     )
@@ -202,31 +197,31 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column" gap={1} padding={1}>
         <Text bold color="#ff7f6b">
-          🌊 Okyanus teması
+          🌊 Ocean theme
         </Text>
         <Text dimColor>{describe(s)}</Text>
 
-        <Text bold>Görünüm</Text>
+        <Text bold>Scene</Text>
         <Box flexDirection="row" gap={1} flexWrap="wrap">
-          <Button key="koyu" label={mark(s.scheme === 'koyu', 'Koyu (lacivert)')} onPress={() => save($, { scheme: 'koyu', isOn: true })} />
-          <Button key="acik" label={mark(s.scheme === 'acik', 'Açık (turkuaz-kum)')} onPress={() => save($, { scheme: 'acik', isOn: true })} />
+          <Button key="dark" label={mark(s.scheme === 'dark', 'Dark (navy)')} onPress={() => save($, { scheme: 'dark', isOn: true })} />
+          <Button key="light" label={mark(s.scheme === 'light', 'Light (turquoise and sand)')} onPress={() => save($, { scheme: 'light', isOn: true })} />
         </Box>
 
-        <Text bold>Animasyon</Text>
+        <Text bold>Motion</Text>
         <Box flexDirection="row" gap={1} flexWrap="wrap">
-          <Button key="tam" label={mark(s.motion === 'tam', 'Tam')} onPress={() => save($, { motion: 'tam', isOn: true })} />
-          <Button key="azalt" label={mark(s.motion === 'azalt', 'Azaltılmış')} onPress={() => save($, { motion: 'azalt', isOn: true })} />
-          <Button key="durgun" label={mark(s.motion === 'durgun', 'Kapalı')} onPress={() => save($, { motion: 'durgun', isOn: true })} />
+          <Button key="full" label={mark(s.motion === 'full', 'Full')} onPress={() => save($, { motion: 'full', isOn: true })} />
+          <Button key="reduced" label={mark(s.motion === 'reduced', 'Reduced')} onPress={() => save($, { motion: 'reduced', isOn: true })} />
+          <Button key="still" label={mark(s.motion === 'still', 'Off')} onPress={() => save($, { motion: 'still', isOn: true })} />
         </Box>
 
         <Box flexDirection="row" gap={1}>
           {s.isOn ? (
-            <Button key="off" label="Temayı kaldır" onPress={() => save($, { isOn: false })} />
+            <Button key="off" label="Remove theme" onPress={() => save($, { isOn: false })} />
           ) : (
-            <Button key="on" label="Temayı aç" onPress={() => save($, { isOn: true })} />
+            <Button key="on" label="Turn theme on" onPress={() => save($, { isOn: true })} />
           )}
         </Box>
-        <Text dimColor>İpucu: en iyi kontrast için uygulamanın kendi görünümünü de aynı moda (koyu/açık) alın.</Text>
+        <Text dimColor>Tip: for the best contrast, set the app's own appearance to the same mode (dark or light).</Text>
       </Box>
     )
   })

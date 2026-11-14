@@ -1,5 +1,6 @@
 {
-  "name": "okyanus-mods",
+  "name": "ocean-theme",
   "owner": { "name": "elifabanoz" },
-  "plugins": [{ "name": "okyanus-tema", "source": "./" }]
+  "description": "An animated underwater theme for the Claude Code desktop app.",
+  "plugins": [{ "name": "ocean-theme", "source": "./" }]
 }

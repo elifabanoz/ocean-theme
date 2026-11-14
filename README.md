@@ -1,56 +1,60 @@
-# Okyanus Teması (ocean-theme)
+# Ocean Theme
 
-Claude Code masaüstü uygulaması için sakin, canlı bir sualtı teması. Sohbetin arkasına animasyonlu bir okyanus sahnesi çizer: yukarıdan süzülen ışık huzmeleri, kenarlarda yüzen sevimli deniz canlıları ve dipte kumsal.
+A calm but lively underwater theme for the Claude Code desktop app. It draws an animated ocean scene behind your conversation: sunlight filtering down from the surface, cute sea creatures swimming along the edges, and a sandy seabed.
 
-*A calm, animated underwater backdrop mod for the Claude Code desktop app: light rays, original cute sea creatures along the edges, and a sandy seabed. Dark and light scenes, with motion you can reduce or turn off.*
+![Ocean theme, dark scene](docs/screenshot-dark.png)
 
-## Neler var
+![Ocean theme, light scene](docs/screenshot-light.png)
 
-- **İki sahne:** koyu (derin okyanus laciverti) ve açık (turkuaz-kum)
-- **Renkler:** mercan turuncusu-pembesi vurgu, deniz yeşili / turkuaz ikincil renk
-- **Canlılar** (hepsi orijinal SVG çizimler):
-  - yunus sürüsü, ara sıra kavis çizerek zıplıyor
-  - yüzgeçlerini çırparak süzülen kaplumbağalar
-  - salınan, kuyruğunu kıvıran deniz atları
-  - nabız gibi kasılıp açılan, parlayan denizanaları
-  - küçük balık sürüleri, yükselen kabarcıklar
-  - kumda dönen deniz yıldızları ve sallanan deniz yosunları
-- Canlılar farklı zamanlarda ve farklı hızlarda geçer; kenarlarda ve arka planda kalır, sohbet metni buzlu camın arkasında okunaklı kalır.
-- Yalnızca CSS ve SVG animasyonu kullanır.
+*The scene with motion turned off. With motion on, the creatures swim, drift and pulse.*
 
-## Kurulum
+## Features
 
-Terminal oturumunda:
+- **Two scenes:** dark (deep ocean navy) and light (turquoise and sand)
+- **Colors:** coral orange-pink accents, with sea green and turquoise as the secondary color
+- **Sea creatures** (all original SVG drawings):
+  - a pod of dolphins that swims across and now and then leaps in an arc
+  - turtles that glide slowly, flapping their flippers
+  - seahorses that bob up and down, curling their tails
+  - glowing jellyfish that pulse as they rise, tentacles waving
+  - small schools of fish and rising bubbles
+  - starfish turning slowly in the sand, and swaying seaweed
+- Creatures move at different times and speeds, so the screen never fills up at once. They stay along the edges and in the background, and the conversation stays readable behind frosted glass.
+- Pure CSS and SVG animation, so it stays light on performance.
 
-```
-/plugin install okyanus-tema --marketplace elifabanoz/ocean-theme
-```
+## Install
 
-Komut satırından:
+In a terminal session:
 
 ```
-claude plugin install okyanus-tema --marketplace elifabanoz/ocean-theme
+/plugin install ocean-theme --marketplace elifabanoz/ocean-theme
 ```
 
-Masaüstü uygulamasında `/plugin` çalışmıyorsa: mesaj kutusunun yanındaki **+** düğmesine tıklayın, **Plugins**'i seçin, **Add marketplace** ile `elifabanoz/ocean-theme` ekleyin, ardından **Add plugin**.
+From a shell:
 
-Arka planın çizilmesi için Claude Code masaüstü uygulamasının güncel bir sürümü ve **Code** sekmesinde yerel bir oturum gerekir.
+```
+claude plugin install ocean-theme --marketplace elifabanoz/ocean-theme
+```
 
-## Kullanım
+In the desktop app, where `/plugin` does not run: click **+** next to the prompt box, then **Plugins**, **Add marketplace** with `elifabanoz/ocean-theme`, then **Add plugin**.
 
-| Komut | Ne yapar |
+The backdrop needs an up-to-date Claude Code desktop app and a local session in the **Code** tab.
+
+## Usage
+
+| Command | What it does |
 | --- | --- |
-| `/okyanus` | Düğmeli ayar panelini açar |
-| `/okyanus koyu` | Derin lacivert sahne |
-| `/okyanus acik` | Açık turkuaz-kum sahne |
-| `/okyanus tam` | Animasyonlar tam |
-| `/okyanus azalt` | Daha yavaş ve daha az hareket |
-| `/okyanus durgun` | Animasyonları kapatır, sahne kalır |
-| `/okyanus kapat` / `/okyanus ac` | Temayı kaldırır / geri getirir |
-| `/okyanus tani` | Temanın çizilip çizilmediğini gösterir |
+| `/ocean` | Opens the settings panel |
+| `/ocean dark` | Deep navy scene |
+| `/ocean light` | Light turquoise and sand scene |
+| `/ocean full` | Full motion |
+| `/ocean reduced` | Slower, calmer motion with fewer extras |
+| `/ocean still` | Turns motion off (the scene stays) |
+| `/ocean off` / `/ocean on` | Removes the theme / brings it back |
+| `/ocean status` | Shows whether the theme is drawn |
 
-Ayarlar oturumlar arasında hatırlanır. En iyi kontrast için uygulamanın kendi görünümünü de seçtiğiniz sahneyle aynı moda (koyu/açık) alın.
+Your settings are remembered across sessions. For the best contrast, set the app's own appearance to the same mode as the scene (dark or light).
 
-## Lisans
+## License
 
 MIT

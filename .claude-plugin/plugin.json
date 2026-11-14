@@ -1,7 +1,7 @@
 {
-  "name": "okyanus-tema",
-  "version": "0.1.0",
-  "description": "Sakin bir sualtı teması: ışık huzmeleri, mercan vurgular ve kenarlarda yüzen animasyonlu deniz canlıları (koyu ve açık mod).",
+  "name": "ocean-theme",
+  "version": "0.2.0",
+  "description": "A calm, animated underwater backdrop for the Claude Code desktop app: light rays, coral accents and cute sea creatures swimming along the edges (dark and light scenes).",
   "types": "./types/index.d.ts",
   "license": "MIT",
   "repository": "https://github.com/elifabanoz/ocean-theme"

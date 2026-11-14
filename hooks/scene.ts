@@ -1,8 +1,8 @@
-// Okyanus sahnesi: tek bir SVG belgesi, CSS ve SMIL animasyonlarıyla.
-// Görünüm kutusu 1600x1000; canlılar kenarlarda ve arka planda kalır,
-// ortadaki sohbet sütunu buzlu panelin arkasında sakin kalır.
+// The ocean scene: one SVG document animated with CSS and SMIL.
+// The view box is 1600x1000; creatures stay along the edges and in the
+// background, so the chat column in the middle stays calm behind the glass.
 
-import type { OkyanusMotion, OkyanusScheme } from '../types'
+import type { OceanMotion, OceanScheme } from '../types'
 
 type Palette = {
   top: string
@@ -35,8 +35,8 @@ type Palette = {
   rock: string
 }
 
-const PALETTES: Record<OkyanusScheme, Palette> = {
-  koyu: {
+const PALETTES: Record<OceanScheme, Palette> = {
+  dark: {
     top: '#0e4d6e',
     mid: '#08304f',
     deep: '#03172a',
@@ -66,7 +66,7 @@ const PALETTES: Record<OkyanusScheme, Palette> = {
     snow: '#cfefff',
     rock: '#163b4a',
   },
-  acik: {
+  light: {
     top: '#dff8f5',
     mid: '#a6e3df',
     deep: '#73cbc8',
@@ -98,7 +98,7 @@ const PALETTES: Record<OkyanusScheme, Palette> = {
   },
 }
 
-// Tekrarlanabilir sözde rastgele sayılar: sahne her çizimde aynı kalır.
+// Repeatable pseudo-random numbers, so the scene is the same on every draw.
 const rng = (seed: number) => () => {
   seed = (seed * 9301 + 49297) % 233280
 
@@ -107,16 +107,16 @@ const rng = (seed: number) => () => {
 
 const n = (v: number) => Math.round(v * 10) / 10
 
-export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string => {
+export const buildScene = (scheme: OceanScheme, motion: OceanMotion): string => {
   const p = PALETTES[scheme]
-  const isMoving = motion !== 'durgun'
-  const isFull = motion === 'tam'
-  // Azaltılmış modda her şey ~2,3 kat yavaş, bazı ayrıntılar kapalı.
+  const isMoving = motion !== 'still'
+  const isFull = motion === 'full'
+  // Reduced motion: everything ~2.3x slower, some extras left out.
   const f = isFull ? 1 : 2.3
   const s = (sec: number) => `${n(sec * f)}s`
   const cls = (name: string) => (isMoving ? ` class="${name}"` : '')
 
-  // ---- Işık huzmeleri ----
+  // ---- Light rays ----
   const rays = [
     { x: 260, w: 120, tilt: 160, delay: 0 },
     { x: 520, w: 70, tilt: 120, delay: -5 },
@@ -130,9 +130,9 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
     )
     .join('')
 
-  // ---- Deniz karı (koyu modda sabit, minik parçacıklar) ----
+  // ---- Marine snow (tiny static specks, denser in the dark scene) ----
   const rnd = rng(7)
-  const snow = Array.from({ length: scheme === 'koyu' ? 46 : 18 }, () => {
+  const snow = Array.from({ length: scheme === 'dark' ? 46 : 18 }, () => {
     const x = n(rnd() * 1600)
     const y = n(rnd() * 820)
     const r = n(0.8 + rnd() * 1.6)
@@ -140,7 +140,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
     return `<circle cx="${x}" cy="${y}" r="${r}" fill="${p.snow}" opacity="${n(0.12 + rnd() * 0.25)}"/>`
   }).join('')
 
-  // ---- Yunus (sağa bakar) ----
+  // ---- Dolphin (faces right) ----
   const dolphinShape = `
     <g class="dolphin-body">
       <path${cls('fluke')} d="M8,40 C-4,32 -14,22 -26,20 C-20,32 -20,46 -26,58 C-14,56 -4,48 8,44 Z" fill="${p.dolphin}"/>
@@ -155,8 +155,8 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
       <path d="M118,14 C126,12 136,14 142,19" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.35"/>
     </g>`
 
-  // Yunus rotası: soldan girer, ortada bir kez kavisli zıplar, sağdan çıkar,
-  // sonra döngünün geri kalanında ekran dışında bekler.
+  // Dolphin route: enters on the left, leaps once in an arc mid-way, leaves on
+  // the right, then waits off screen for the rest of the cycle.
   const dolphinFrames: string[] = []
   const pushFrame = (pct: number, x: number, y: number, rot: number) =>
     dolphinFrames.push(`${n(pct)}%{transform:translate(${n(x)}px,${n(y)}px) rotate(${n(rot)}deg)}`)
@@ -176,7 +176,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
   pushFrame(38, 1920, 210, 0)
   pushFrame(100, 1920, 210, 0)
 
-  // ---- Kaplumbağa (sağa bakar; sahnede sola doğru yüzer) ----
+  // ---- Turtle (drawn facing right; swims left across the scene) ----
   const turtleShape = `
     <g transform="scale(-1,1)">
       <path${cls('flip-back')} d="M-46,14 C-58,26 -72,32 -84,30 C-74,22 -64,14 -56,8 Z" fill="${p.skin}"/>
@@ -194,7 +194,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
       <path${cls('flip-front')} d="M30,12 C40,30 60,48 84,54 C70,42 56,26 46,10 Z" fill="${p.skin}"/>
     </g>`
 
-  // ---- Deniz atı (sağa bakar, mercan tonlarında) ----
+  // ---- Seahorse (faces right, in coral tones) ----
   const tailA = 'M9,32 C4,56 18,74 32,70 C44,66 42,50 30,50 C22,50 22,60 28,61'
   const tailB = 'M9,32 C0,58 10,80 28,78 C42,76 46,58 34,54 C24,52 22,62 28,64'
   const seahorseShape = `
@@ -210,7 +210,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
     <circle cx="31.4" cy="-71.4" r="1.4" fill="#ffffff"/>
     <ellipse cx="26" cy="-60" rx="4" ry="2.4" fill="#ffffff" opacity="0.35"/>`
 
-  // ---- Denizanası ----
+  // ---- Jellyfish ----
   const tent = (x: number, len: number, phase: number) => {
     const a = `M${x},0 C${x - 8},${len * 0.3} ${x + 8},${len * 0.6} ${x},${len}`
     const b = `M${x},0 C${x + 8},${len * 0.3} ${x - 8},${len * 0.6} ${x + 3},${len}`
@@ -243,7 +243,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
       <path d="M-5,-10 C-2,-7 2,-7 5,-10" stroke="${p.eye}" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.55"/>
     </g>`
 
-  // ---- Deniz yıldızı ----
+  // ---- Starfish ----
   const starPath = (R: number, r: number) => {
     const pts: string[] = []
     for (let i = 0; i < 10; i++) {
@@ -267,7 +267,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
       </g>
     </g>`
 
-  // ---- Deniz yosunu ----
+  // ---- Seaweed ----
   const weed = (x: number, h: number, color: string, dur: number, delay: number, lean: number) => {
     const d = `M0,0 C${-14 + lean},${-h * 0.25} ${14 + lean},${-h * 0.5} ${lean * 1.5},${-h * 0.75} S${-8 + lean * 2},${-h * 0.95} ${lean * 2},${-h}`
 
@@ -287,7 +287,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
     weed(1452, 300, p.weedA, 7.5, -6, -2),
   ].join('')
 
-  // ---- Kabarcıklar (yalnızca kenarlardan yükselir) ----
+  // ---- Bubbles (rise along the edge strips only) ----
   const bubbleCount = isFull ? 20 : 8
   const brnd = rng(42)
   const bubbles = isMoving
@@ -314,7 +314,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
         )
         .join('')
 
-  // ---- Küçük balık sürüleri ----
+  // ---- Small fish schools ----
   const fish = (x: number, y: number, size: number, color: string, phase: number) => `
     <g transform="translate(${x},${y}) scale(${size})">
       <g${cls('fish')} style="animation-delay:${n(-phase * f)}s">
@@ -336,7 +336,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
   const schoolA = school([p.coral, p.starB, p.coral, p.coralSoft, p.starB, p.coral], 11)
   const schoolB = school([p.teal, p.tealDeep, p.teal, p.weedB, p.teal], 23)
 
-  // ---- Dip: kum, çakıllar, kayalar, mercan dalları, deniz kabukları ----
+  // ---- Seabed: sand, pebbles, rocks, coral branches, shells ----
   const coralBranch = (x: number, y: number, scale: number, color: string) => `
     <g transform="translate(${x},${y}) scale(${scale})" stroke="${color}" stroke-width="10" fill="none" stroke-linecap="round" opacity="0.85">
       <path d="M0,0 C0,-40 -6,-70 -30,-96 M0,-30 C10,-60 30,-70 34,-100 M-4,-58 C-20,-70 -40,-66 -52,-80 M18,-62 C30,-76 46,-74 56,-90"/>
@@ -376,7 +376,7 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
     star(1400, 925, 0.85, p.starB, -8, 12, -2),
   ].join('')
 
-  // ---- Durağan konumlar (hareket kapalıyken) ----
+  // ---- Resting positions (when motion is off) ----
   const dolphinStatic = 'translate(1120,150) rotate(-4)'
   const turtleStatic = 'translate(420,740)'
 
@@ -448,11 +448,11 @@ export const buildScene = (scheme: OkyanusScheme, motion: OkyanusMotion): string
       <stop offset="1" stop-color="${p.jelly}"/>
     </radialGradient>
     <radialGradient id="jellyHalo" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="${p.jellyGlow}" stop-opacity="${scheme === 'koyu' ? 0.35 : 0.3}"/>
+      <stop offset="0" stop-color="${p.jellyGlow}" stop-opacity="${scheme === 'dark' ? 0.35 : 0.3}"/>
       <stop offset="1" stop-color="${p.jellyGlow}" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="surface" cx="0.5" cy="0" r="0.8">
-      <stop offset="0" stop-color="${p.ray}" stop-opacity="${scheme === 'koyu' ? 0.14 : 0.5}"/>
+      <stop offset="0" stop-color="${p.ray}" stop-opacity="${scheme === 'dark' ? 0.14 : 0.5}"/>
       <stop offset="1" stop-color="${p.ray}" stop-opacity="0"/>
     </radialGradient>
   </defs>
