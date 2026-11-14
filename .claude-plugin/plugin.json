@@ -1,0 +1,8 @@
+{
+  "name": "okyanus-tema",
+  "version": "0.1.0",
+  "description": "Sakin bir sualtı teması: ışık huzmeleri, mercan vurgular ve kenarlarda yüzen animasyonlu deniz canlıları (koyu ve açık mod).",
+  "types": "./types/index.d.ts",
+  "license": "MIT",
+  "repository": "https://github.com/elifabanoz/ocean-theme"
+}

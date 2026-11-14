@@ -1,0 +1,5 @@
+{
+  "name": "okyanus-mods",
+  "owner": { "name": "elifabanoz" },
+  "plugins": [{ "name": "okyanus-tema", "source": "./" }]
+}
